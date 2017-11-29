@@ -11,10 +11,11 @@ public class Pseudogene {
 	private int exonHits;
 	private int exonPoss;
 	private List<String> foundExons;
+	private List<String> foundBPs;
 	private String ENST;
 	private boolean isPrimary;
 		
-	public Pseudogene (int codingStart, int codingStop, int junctionHits, int junctionPoss, int exonHits, int exonPoss, List<String> foundExons, String ENST, boolean isPrimary) {
+	public Pseudogene (int codingStart, int codingStop, int junctionHits, int junctionPoss, int exonHits, int exonPoss, List<String> foundExons, List<String> foundBPs, String ENST, boolean isPrimary) {
 		this.codingStart = codingStart;
 		this.codingStop = codingStop;
 		this.junctionHits = junctionHits;
@@ -22,6 +23,7 @@ public class Pseudogene {
 		this.exonHits = exonHits;
 		this.exonPoss = exonPoss;
 		this.foundExons = foundExons;
+		this.foundBPs = foundBPs;
 		this.ENST = ENST;
 		this.isPrimary = isPrimary;
 	}
@@ -46,6 +48,9 @@ public class Pseudogene {
 	}
 	public List<String> getFoundExons() {
 		return foundExons;
+	}
+	public List<String> getFoundBPs() {
+		return foundBPs;
 	}
 	public String getENST() {
 		return ENST;

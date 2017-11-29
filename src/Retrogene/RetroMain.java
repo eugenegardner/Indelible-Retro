@@ -4,21 +4,24 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import Gene.Gene;
 import Gene.GenesLoader;
+import Gene.IDLoader;
+import Gene.IDLoader.ID;
 import Gene.Transcript;
+import htsjdk.samtools.SamInputResource;
+import htsjdk.samtools.SamReader;
 import htsjdk.samtools.SamReaderFactory;
 import htsjdk.samtools.ValidationStringency;
 import htsjdk.samtools.cram.ref.ReferenceSource;
 import htsjdk.samtools.reference.FastaSequenceIndex;
 import htsjdk.samtools.reference.IndexedFastaSequenceFile;
-import htsjdk.samtools.util.IntervalTree;
-import htsjdk.samtools.util.IntervalTree.Node;
 
 public class RetroMain {
 
@@ -31,89 +34,48 @@ public class RetroMain {
 		File fastaIndex = new File(args[2] + ".fai");
 		
 		Map<String, Gene> geneHash = new GenesLoader().BuildHash();
+		ID currentID = new IDLoader().BuildHash().get(getDDDid(indelibleCalls));
 		
 		ReferenceSource refSource = new ReferenceSource(new IndexedFastaSequenceFile(fasta, new FastaSequenceIndex(fastaIndex)));
 		SamReaderFactory readerFactory = SamReaderFactory.makeDefault().validationStringency(ValidationStringency.SILENT).referenceSource(refSource);
 		
 //		SamReader bamReader = readerFactory.open(SamInputResource.of(bamFile).index(bamIndex));
-		IndelibleParser indelibleParser = new IndelibleParser(indelibleCalls);
+		InspectTranscript inspect = new InspectTranscript(indelibleCalls);
 		
 		for (Map.Entry<String, Gene> entry : geneHash.entrySet()) {
 			
 			Gene g = entry.getValue();
 			Set<Pseudogene> pseudogenes = new HashSet<Pseudogene>();			
 			
+						
 			for (Transcript t : g.getTranscripts()) {
 			
-				IntervalTree<Integer> exons = t.getExons();
-				Iterator<Node<Integer>> exonItr = exons.iterator();
-			
-				//Catalog exons with a signature
-				List<String> foundExons = new ArrayList<String>();
-				int totalHits = 0;
-				int totalExons = 0;
-				int possiHits = 0;
-				int possiExons = exons.size();
-				
-				while (exonItr.hasNext()) {
-					Node<Integer> currentExon = exonItr.next();
-					int exonStart = currentExon.getStart();
-					int exonEnd = currentExon.getEnd();
-					possiHits+=2;
-					
-					boolean hitLeft = false;
-					boolean hitRight = false;
-					
-					int leftPos = indelibleParser.parseIndelible(g.getChr(), exonStart);
-					int rightPos = indelibleParser.parseIndelible(g.getChr(), exonEnd);
-					
-					if (leftPos > 0) {
-						hitLeft = true;
-						totalHits++;
-					}
-					if (rightPos > 0) {
-						hitRight = true;
-						totalHits++;
-					}
-					
-					//Only look for change in the split reads at the 5' and 3' UTR 
-					if (currentExon.getValue() == 1 || currentExon.getValue() == possiExons) {
-						if (hitLeft == false && hitRight == true) {
-							leftPos = indelibleParser.parseIndelible(g.getChr(), exonStart, rightPos);
-							if (leftPos > -1) {
-								hitLeft = true;
-							}
-						} else if (hitLeft == true && hitRight == false) {
-							rightPos = indelibleParser.parseIndelible(g.getChr(), exonEnd, leftPos);
-							if (rightPos > -1) {
-								hitRight = true;
-							}
-						}
-					}
-					if (hitLeft && hitRight) {
-						foundExons.add(leftPos + "," + rightPos);
-						totalExons++;
-					}
-																					
+				Pseudogene ps = inspect.Inspect(t, g.getPrimaryTranscript(), g.getChr());
+				if (ps != null) {
+					pseudogenes.add(ps);
 				}
-				
-				if (totalHits >= 2) {
-					pseudogenes.add(new Pseudogene(t.getCodingStart(), t.getCodingStop(), totalHits, possiHits, totalExons, possiExons, foundExons, t.getID(), t.getID().equals(g.getPrimaryTranscript())));
-				}
-				
+	
 			}
 			
 			if (pseudogenes.size() > 0) {
 				Pseudogene p = getPseudogene(pseudogenes);
-				for (Pseudogene ps : pseudogenes) {
-					System.out.println("\t" + ps.getENST() + "\t" + ps.isPrimary() + "\t" + ps.getJunctionHits() + "\t" + ps.getJunctionPoss() + "\t" + ps.getExonHits() + "\t" + ps.getExonPoss());
-				}
+				System.out.println(g.getChr() + "\t" + p.getCodingStart() + "\t" + p.getCodingStop() + "\t" + currentID.getEugeneID() + "\t" + g.getName() + "\t" + g.getID() + "\t" + p.getENST() + "\t" + p.getJunctionHits() + "\t" + p.getJunctionPoss() + "\t" + p.getExonHits() + "\t" + p.getExonPoss() + "\t" + g.getpLI() + "\t" + g.hasKnownPS() + "\t" + g.getddg2p() + "\t" + p.isPrimary() + "\t" + Combine.combineList(p.getFoundBPs(), ";") + "\t" + Combine.combineList(p.getFoundExons(), ";"));
 			}
-		
+			
 		}
 		
 	}
 	
+	private static String getDDDid (File indelibleFile) {
+		
+		Matcher DDDmatch = Pattern.compile("(DDD_MAIN\\d{7})\\.bam\\.indelible\\.tsv").matcher(indelibleFile.getName());
+		if (DDDmatch.matches()) {
+			return DDDmatch.group(1);
+		} else {
+			return null;
+		}
+		
+	}
 	private static Pseudogene getPseudogene(Set<Pseudogene> pseudogenes) {
 		
 		//Get max first:
@@ -163,4 +125,5 @@ public class RetroMain {
 			}
 		}
 	}
+
 }
