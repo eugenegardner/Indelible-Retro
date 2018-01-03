@@ -8,8 +8,11 @@ import java.util.Map;
 
 public class IDLoader implements Loader {
 
+	private Map<String, ID> IDHash;
+	
 	public IDLoader () throws IOException {
 		super();
+		IDHash = BuildHash();
 	}
 	
 	public Map<String, ID> BuildHash() throws IOException {
@@ -28,6 +31,17 @@ public class IDLoader implements Loader {
 
 	}
 	
+	public ID getID(String dddpID) {
+
+		if (IDHash.containsKey(dddpID)) {
+			return IDHash.get(dddpID);
+		} else {
+			return new ID(null, null, dddpID, null);
+		}
+		
+		
+	}
+	
 	public class ID {
 		
 		private String dddID;
@@ -35,7 +49,7 @@ public class IDLoader implements Loader {
 		private String eugeneID;
 		private String stableID;
 		
-		private ID (String dddID, String decipherID, String eugeneID, String stableID) {
+		public ID (String dddID, String decipherID, String eugeneID, String stableID) {
 			this.dddID = dddID;
 			this.decipherID = decipherID;
 			this.eugeneID = eugeneID;
