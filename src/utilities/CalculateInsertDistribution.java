@@ -8,7 +8,6 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.SAMRecordIterator;
-import htsjdk.samtools.SAMSequenceRecord;
 import htsjdk.samtools.SamInputResource;
 import htsjdk.samtools.SamReader;
 import htsjdk.samtools.SamReaderFactory;
@@ -16,7 +15,7 @@ import htsjdk.samtools.ValidationStringency;
 
 public class CalculateInsertDistribution {
 	
-	public static double CalculatePercentile (File origBam, File origIndex, int minChrSize, int percentile) throws NullInsertDistribution, IOException {
+	public static double CalculatePercentile (File origBam, File origIndex, int minChrSize, double percentile) throws NullInsertDistribution, IOException {
 		
 		DescriptiveStatistics insertSizes = new DescriptiveStatistics();
 		

@@ -5,12 +5,13 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
 import htsjdk.samtools.util.IntervalTree;
+import htsjdk.samtools.util.IntervalTree.Node;
 
 public class GenesLoader implements Loader {
 
@@ -96,6 +97,14 @@ public class GenesLoader implements Loader {
 		}
 				
 		geneReader.close();
+
+		for (Map.Entry<String, Gene> entry : geneData.entrySet()) {
+			
+			IntervalTree<Exon> exons = buildExons(entry.getValue().getTranscripts());
+			entry.getValue().setExons(exons);
+			
+		}
+		
 		return geneData;
 		
 	}
@@ -208,6 +217,57 @@ public class GenesLoader implements Loader {
 		} else {
 			return false;
 		}
+	}
+	
+	private IntervalTree<Exon> buildExons(Set<Transcript> transcripts) {
+		
+		IntervalTree<Exon> exons = new IntervalTree<Exon>();
+		int exonCounter = 1;
+		
+		for (Transcript t: transcripts) {
+			
+			IntervalTree<Integer> tExons = t.getExons();
+			Iterator<Node<Integer>> exonItr = tExons.iterator();
+			while (exonItr.hasNext()) {
+				Node<Integer> currentExon = exonItr.next();
+				Node<Exon> matchedExon = exons.find(currentExon.getStart(), currentExon.getEnd());
+				
+				if (matchedExon != null) {
+					matchedExon.getValue().addTranscript(t.getID());
+					exons.put(matchedExon.getStart(), matchedExon.getEnd(), matchedExon.getValue());
+				} else {
+					Exon e = new Exon(exonCounter);
+					exonCounter++;
+					e.addTranscript(t.getID());
+					exons.put(currentExon.getStart(), currentExon.getEnd(), e);
+				}
+			}
+		}
+		
+		return exons;
+		
+	}
+	
+	public class Exon {
+		
+		Set<String> transcripts;
+		int exonNum;
+		
+		private Exon(int exonNum) {
+			transcripts = new HashSet<String>();
+			this.exonNum = exonNum;
+		}
+		
+		public int getExonNum() {
+			return exonNum;
+		}
+		public void addTranscript(String transcriptID) {
+			transcripts.add(transcriptID);
+		}
+		public Set<String> getTranscripts() {
+			return transcripts;
+		}
+		
 	}
 	
 }

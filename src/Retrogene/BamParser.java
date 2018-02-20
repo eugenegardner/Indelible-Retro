@@ -1,10 +1,13 @@
 package Retrogene;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 
+import Gene.GenesLoader.Exon;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMFileWriter;
 import htsjdk.samtools.SAMFileWriterFactory;
@@ -18,20 +21,25 @@ import htsjdk.samtools.ValidationStringency;
 import htsjdk.samtools.cram.ref.ReferenceSource;
 import htsjdk.samtools.util.IntervalTree;
 import htsjdk.samtools.util.IntervalTree.Node;
-import utilities.CalculateInsertDistribution;
+import htsjdk.tribble.annotation.Strand;
 import utilities.CalculateInsertDistribution.NullInsertDistribution;
+import utilities.CheckReadStatus.Direction;
+import utilities.QualityChecker;
+import utilities.CheckReadStatus;
 
-public class BamParser {
+public class BamParser implements Closeable {
 
 	private SamReader bamReader;
 	private Double cutoffPercentile;
+	private Set<SAMRecord> foundReads;
 //	private SAMFileWriter bamWriter;
 //	private Set<SAMRecord> alreadyAdded;
 	
-	public BamParser(File bamFile, File bamIndex, ReferenceSource refSource) throws NullInsertDistribution, IOException {
+	public BamParser(File bamFile, File bamIndex, ReferenceSource refSource, double cutoffPercentile) throws NullInsertDistribution, IOException {
 		
-		cutoffPercentile = CalculateInsertDistribution.CalculatePercentile(bamFile, bamIndex, 10000000, 95);
+		this.cutoffPercentile = cutoffPercentile;
 		bamReader = SamReaderFactory.makeDefault().validationStringency(ValidationStringency.SILENT).open(SamInputResource.of(bamFile).index(bamIndex));
+		foundReads = new HashSet<SAMRecord>();
 //		SAMFileHeader testHeader = bamReader.getFileHeader();
 //		testHeader.setSortOrder(SAMFileHeader.SortOrder.coordinate);
 //		SAMFileWriterFactory writerFactory = new SAMFileWriterFactory().setCreateIndex(true);
@@ -40,118 +48,100 @@ public class BamParser {
 		
 	}
 
-	public Set<Node<Integer>> findDPs (String chr, Node<Integer> exon, IntervalTree<Integer> exons, SearchDirection searchDirection) {
-		return this.findDPs(chr, exon.getStart(), exon.getEnd(), exon.getValue(), exons, searchDirection);
-	}
-	public Set<Node<Integer>> findDPs (String chr, int exonStart, int exonEnd, int exonNumber, IntervalTree<Integer> exons, SearchDirection searchDirection) {
-		
-		SAMRecordIterator samItr = bamReader.queryContained(chr, exonStart, exonEnd);
+	public int findDPs (String chr, Node<Exon> exon, IntervalTree<Exon> exons) {
+				
+		SAMRecordIterator samItr = bamReader.queryContained(chr, exon.getStart(), exon.getEnd());
 		Set<SAMRecord> DPs = new HashSet<SAMRecord>();
-		Set<Node<Integer>> foundExons = new HashSet<Node<Integer>>();
-		while (samItr.hasNext()) {
+		int totalReadsParsed = 0;
+		while (samItr.hasNext() && totalReadsParsed <= 1000) {
 			SAMRecord currentRecord = samItr.next();
-			boolean isDP = checkDPstatus(currentRecord);
+			totalReadsParsed++;
+			boolean isDP = CheckReadStatus.checkDPStatus(currentRecord, cutoffPercentile);
 			if (isDP) {
 				DPs.add(currentRecord);
 			}
 		}
-		
+
 		samItr.close();
 		int foundDP = 0;
 		for (SAMRecord currentRecord : DPs) {
-			
 			try {
 				SAMRecord currentMate = bamReader.queryMate(currentRecord);
-			
 				if (currentMate != null) {
-					if (checkDPstatus(currentMate)) {
-						Node<Integer> foundExon = exons.minOverlapper(currentMate.getAlignmentStart(), currentMate.getAlignmentEnd());
-						if (foundExon != null) {
-							int exonNum = foundExon.getValue();
-							if (searchDirection == SearchDirection.LEFT && (exonNum == (exonNumber - 1) || exonNum == (exonNumber - 2))) {
+					if (CheckReadStatus.checkDPStatus(currentMate, cutoffPercentile)) {
+						Iterator<Node<Exon>> foundExons = exons.overlappers(currentMate.getAlignmentStart(), currentMate.getAlignmentEnd());
+						while (foundExons.hasNext()) {
+										
+							Node<Exon> foundExon = foundExons.next();
+							int foundExonNum = foundExon.getValue().getExonNum();
+							int exonNum = exon.getValue().getExonNum();
+							Set<String> foundTranscripts = foundExon.getValue().getTranscripts();
+							Set<String> transcripts = exon.getValue().getTranscripts();
+							int distance;
+							if (foundExon.getRelationship(exon) == Node.HAS_LESSER_PART) {
+								distance = exon.getStart() - foundExon.getEnd();
+							} else {
+								distance = foundExon.getStart() - exon.getEnd();
+							}
+														
+							if (exonNum != foundExonNum && checkTranscripts(foundTranscripts, transcripts) && distance > cutoffPercentile) {
 								foundDP++;
-							} else if (searchDirection == SearchDirection.RIGHT && (exonNum == (exonNumber + 1) || exonNum == (exonNumber + 2))) {
-								foundDP++;
+								//Only add a read once
+								foundReads.add(currentRecord);
+								foundReads.add(currentMate);
+								break;
 							}
 						}
-						
-		//				if (!alreadyAdded.contains(currentRecord)) {
-		//					bamWriter.addAlignment(currentRecord);
-		//					alreadyAdded.add(currentRecord);
-		//				}
-		//				if (!alreadyAdded.contains(currentMate)) {
-		//					bamWriter.addAlignment(currentMate);
-		//					alreadyAdded.add(currentMate);
-		//				}
 					}
 				}
 			} catch (SAMFormatException e) {
 				continue;
 			}
 		}
-		if (foundDP >= 4) {
-			foundExons.add(exons.minOverlapper(exonStart, exonEnd));
-			Node<Integer> foundExon;
-			if (searchDirection == SearchDirection.RIGHT) {
-				foundExon = exons.min(exonEnd + 15, exonEnd + 15);
-			} else {
-				foundExon = exons.max(exonStart - 15, exonStart - 15);
-			}
-			if (foundExon != null) {
-				foundExons.add(foundExon);
-				Set<Node<Integer>> recursiveExons = findDPs(chr, foundExon, exons, searchDirection);
-				if (!recursiveExons.isEmpty()) {
-					foundExons.addAll(recursiveExons);
-				}
-			}
-		}
-		return foundExons;
+		return foundDP;
 		
 	}
-	 public enum SearchDirection {
-		 LEFT,
-		 RIGHT;
-	 }
+	
+	public int findSRs (String chr, int breakpoint, Direction direction, IntervalTree<Exon> exons) throws IOException {
+		
+		SAMRecordIterator samItr = bamReader.queryOverlapping(chr, breakpoint, breakpoint);
+		int totalReadsParsed = 0;
+		int totalSRs = 0;
+		QualityChecker checker = new QualityChecker();
+		while (samItr.hasNext() && totalReadsParsed <= 1000) {
+			SAMRecord currentRecord = samItr.next();
+			totalReadsParsed++;
+			boolean isSR = CheckReadStatus.checkSRStatus(currentRecord, breakpoint, direction, checker);
+			if (isSR && foundReads.contains(currentRecord) == false) {
+				totalSRs++;
+				foundReads.add(currentRecord);
+			}
+		}
+		samItr.close();
+		return totalSRs;
+		
+	}
 	
 	
-	public void closeHandles() throws IOException {
+	public void close() throws IOException {
 //		bamWriter.close();
 		bamReader.close();
 	}
 	
-	/**
-	 * 
-	 * @param currentRecord
-	 * @return {@code true} if include {@code SAMRecord} in downstream analysis, {@code false} if not
-	 * 
-	 */
-	
-	private boolean checkDPstatus(SAMRecord currentRecord) {
+	private boolean checkTranscripts(Set<String> foundTranscripts, Set<String> currentTranscripts) {
 		
-		try {
-			if (currentRecord.getReadPairedFlag() == false) {
-				return false;
+		boolean found = false;
+		
+		for (String t : currentTranscripts) {
+			if (foundTranscripts.contains(t)) {
+				found = true;
+				break;
 			}
-		} catch (NullPointerException e) {
-			System.out.println(currentRecord.getSAMString());
-			e.printStackTrace();
-			System.exit(1);
 		}
-
-		// Collect all info about read
-		String cigar = currentRecord.getCigarString();
-		int quality = currentRecord.getMappingQuality();
-		boolean dupe = currentRecord.getDuplicateReadFlag();
-		boolean checkMapped = currentRecord.getMateUnmappedFlag();
-		int insertSize = Math.abs(currentRecord.getInferredInsertSize());
 		
-		// Check if Quality is bad in a number of factors
-		if ((cigar.equals("*") == true) || (quality <= 10) || (cigar.matches("\\S*M\\S*") == false) || (dupe == true) || checkMapped == true) {
-			return false;
-		} else {
-			// Check if insert size is outside the 95th percentile to determine discordant status
-			return insertSize > cutoffPercentile ? true : false;
-		}	
+		return found;
+		
 	}
+	
 	
 }

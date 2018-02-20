@@ -3,49 +3,26 @@ package Retrogene;
 import java.util.List;
 import java.util.Set;
 
+import Gene.GenesLoader.Exon;
 import htsjdk.samtools.util.IntervalTree.Node;
 
 public class Pseudogene {
 
-	private int start;
-	private int stop;
-	private int codingStart;
-	private int codingStop;
 	private int junctionHits;
 	private int junctionPoss;
 	private int exonPoss;
-	private Set<Node<Integer>> foundExons;
+	private Set<Node<Exon>> foundExons;
 	private List<String> foundBPs;
-	private String ENST;
-	private boolean isPrimary;
+	
+	public Pseudogene (int junctionHits, int junctionPoss, int exonPoss, Set<Node<Exon>> foundExons, List<String> foundBPs) {
 		
-	public Pseudogene (int start, int stop, int codingStart, int codingStop, int junctionHits, int junctionPoss, int exonPoss, Set<Node<Integer>> foundExons, List<String> foundBPs, String ENST, boolean isPrimary) {
-		this.start = start;
-		this.stop = stop;
-		this.codingStart = codingStart;
-		this.codingStop = codingStop;
 		this.junctionHits = junctionHits;
 		this.junctionPoss = junctionPoss;
 		this.exonPoss = exonPoss;
 		this.foundExons = foundExons;
 		this.foundBPs = foundBPs;
-		this.ENST = ENST;
-		this.isPrimary = isPrimary;
 	}
 
-	
-	public int getStart() {
-		return start;
-	}
-	public int getStop() {
-		return stop;
-	}
-	public int getCodingStart() {
-		return codingStart;
-	}
-	public int getCodingStop() {
-		return codingStop;
-	}
 	public int getJunctionHits() {
 		return junctionHits;
 	}
@@ -58,17 +35,11 @@ public class Pseudogene {
 	public int getExonPoss() {
 		return exonPoss;
 	}
-	public Set<Node<Integer>> getFoundExons() {
+	public Set<Node<Exon>> getFoundExons() {
 		return foundExons;
 	}
 	public List<String> getFoundBPs() {
 		return foundBPs;
 	}
-	public String getENST() {
-		return ENST;
-	}
-	public boolean isPrimary() {
-		return isPrimary;
-	}
-	
+
 }

@@ -34,16 +34,16 @@ public class Combine {
 	  return out.toString();
 	}
 	public static String combineSet(Set<String> s, String glue) {
-		  int k = s.size();
-		  if ( k == 0 )
-		  {
-		    return null;
-		  }
-		  List<String> t = new ArrayList<String>();
-		  for (String str : s) {
-			  t.add(str);
-		  }
-		  return combineList(t, glue);
-		}
+	  int k = s.size();
+	  if ( k == 0 )
+	  {
+	    return null;
+	  }
+	  List<String> t = new ArrayList<String>();
+	  for (String str : s) {
+		  t.add(str);
+	  }
+	  return combineList(t, glue);
+	}
 
 }

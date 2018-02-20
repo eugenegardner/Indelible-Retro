@@ -2,6 +2,7 @@ package Retrogene;
 
 import java.util.Comparator;
 
+@Deprecated
 public class PseudogeneComparator implements Comparator<Pseudogene> {
 
 	@Override
