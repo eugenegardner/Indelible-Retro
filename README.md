@@ -1,3 +1,3 @@
 # Indelible-Retro
 
-Uses the existing Indelible framework to discover processed psuedogenes in WXS data
+Uses split and discordant read pair evidence to discover processed psuedogenes in WXS data
