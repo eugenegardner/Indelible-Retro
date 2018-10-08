@@ -1,4 +1,4 @@
-package Genotype;
+package DRPFinder;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -14,17 +14,23 @@ import Gene.GenesLoader.Exon;
 import Retrogene.Pseudogene;
 import Retrogene.RetroMain;
 import Retrogene.TranscriptInspector;
-import Retrogene.TranscriptInspector.RescueReturn;
+import htsjdk.samtools.SAMFileHeader;
+import htsjdk.samtools.SAMFileHeader.SortOrder;
+import htsjdk.samtools.SAMFileWriter;
+import htsjdk.samtools.SAMFileWriterFactory;
+import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.SamInputResource;
+import htsjdk.samtools.SamReader;
+import htsjdk.samtools.SamReaderFactory;
 import htsjdk.samtools.cram.ref.ReferenceSource;
 import htsjdk.samtools.reference.FastaSequenceIndex;
 import htsjdk.samtools.reference.IndexedFastaSequenceFile;
-import htsjdk.samtools.util.IntervalTree;
 import htsjdk.samtools.util.IntervalTree.Node;
 import utilities.CalculateInsertDistribution;
-import utilities.CalculateInsertDistribution.NullInsertDistribution;
 import utilities.EvaluateIndex;
+import utilities.CalculateInsertDistribution.NullInsertDistribution;
 
-public class Genotype {
+public class DRPFinder {
 
 	public static void main(String[] args) throws IOException, NullInsertDistribution {
 
@@ -42,30 +48,38 @@ public class Genotype {
 		String line;
 		Set<Node<Exon>> finalExons = new HashSet<Node<Exon>>();
 		Set<String> foundBams = new HashSet<String>();
-				
+
+		SAMFileHeader header = null;
+		
 		while ((line = posReader.readLine()) != null) {
 			
 			File bamFile = new File(line);
 			foundBams.add(RetroMain.getBamName(bamFile));
 			File bamIndex = EvaluateIndex.returnIndex(bamFile);
+			if (header == null) {
+				SamReader samReader = SamReaderFactory.makeDefault().open(SamInputResource.of(bamFile).index(bamIndex));
+				header = samReader.getFileHeader();
+			}
 			double cutoffPercentile = CalculateInsertDistribution.CalculatePercentile(bamFile, bamIndex, 10000000, 99.5);
 			TranscriptInspector inspect = new TranscriptInspector(new File("/lustre/scratch115/projects/ddd/users/eg15/Retrogene/calls_drp/fake.txt"), bamFile, bamIndex, refSource, cutoffPercentile);
 			Pseudogene ps = inspect.Inspect(current.getExons(), current.getChr());
+			
+			if (ps != null) {
+				finalExons.addAll(ps.getFoundExons());
+			}
 						
-			finalExons.addAll(ps.getFoundExons());
-						
-		}
-		
-		IntervalTree<Exon> it = new IntervalTree<Exon>();
-//		System.out.println("Model");
-		for (Node<Exon> n : finalExons) {
-//			System.out.println(current.getChr() + "\t" + n.getStart() + "\t" + n.getEnd() + "\t" +  n.getValue().getExonNum());
-			it.put(n.getStart(), n.getEnd(), n.getValue());
 		}
 		
 		posReader.close();
+	
+		header.setSortOrder(SortOrder.coordinate);
 		
 		BufferedReader bamFiles = new BufferedReader(new FileReader(allBams));
+		
+		SAMFileWriterFactory fac = new SAMFileWriterFactory();
+		fac.setCreateIndex(true);
+		SAMFileWriter DRPWriter = fac.makeBAMWriter(header, false, new File("/nfs/ddd0/eg15/test.sorted.bam"));
+		
 		while ((line = bamFiles.readLine()) != null) {
 			
 			File bamFile = new File(line);
@@ -73,20 +87,19 @@ public class Genotype {
 			String currentBam = RetroMain.getBamName(bamFile);
 			
 			if (foundBams.contains(currentBam)) {
-				continue;
-			} else {
-				double cutoffPercentile = CalculateInsertDistribution.CalculatePercentile(bamFile, bamIndex, 10000000, 99.5);
-				TranscriptInspector inspect = new TranscriptInspector(new File("/lustre/scratch115/projects/ddd/users/eg15/Retrogene/calls_drp/fake.txt"), bamFile, bamIndex, refSource, cutoffPercentile);
-				RescueReturn ret = inspect.InspectRescue(it, current.getChr(), currentBam);
-				if (ret.getTotalDPs() > 0 || ret.getTotalSRs() > 0) {
-					System.out.println(current.getChr() + "\t" + current.getStart() + "\t" + current.getStop() + "\t" + currentBam + "\t" + current.getName() + "\t" + current.getID() + "\t" + ret.getTotalSRs() + "\tNaN\t" + ret.getTotalDPs() + "\t" + it.size() + "\t" + current.getpLI() + "\t" + current.hasKnownPS() + "\t" + current.getddg2p());
+				
+				Set<SAMRecord> drps = FindDRPs.getDRPs(current.getChr(), bamFile, bamIndex, finalExons);
+				for (SAMRecord rec : drps) {
+					DRPWriter.addAlignment(rec);
 				}
-			}		
+				
+			}
+			
 		}
 		
+		DRPWriter.close();
 		bamFiles.close();
 		
-		
 	}
-
+	
 }

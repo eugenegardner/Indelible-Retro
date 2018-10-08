@@ -6,9 +6,11 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import Gene.GenesLoader.Exon;
+import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.cram.ref.ReferenceSource;
 import htsjdk.samtools.util.IntervalTree;
 import htsjdk.samtools.util.IntervalTree.Node;
@@ -62,7 +64,7 @@ public class TranscriptInspector {
 				}
 			}
 			
-			if (bamParser.findDPs(chr, currentExon, exons) >= 4) {
+			if (bamParser.findDPs(chr, currentExon, exons, false) >= 4) {
 				foundExons.add(currentExon);
 			}	
 			
@@ -75,37 +77,52 @@ public class TranscriptInspector {
 		}
 		
 	}
-	public void InspectRescue(IntervalTree<Exon> exons, String chr) throws NumberFormatException, IOException {
+	public RescueReturn InspectRescue(IntervalTree<Exon> exons, String chr, String currentBam) throws NumberFormatException, IOException {
 		
 		Iterator<Node<Exon>> exonItr = exons.iterator();
-		
-		//Catalog exons with a signature
-		List<String> foundBPs = new ArrayList<String>();
-		Set<Node<Exon>> foundExons = new HashSet<Node<Exon>>();
-		int totalHits = 0;
-		int possiHits = 0;
-		int possiExons = exons.size();
-		
+				
 		List<Node<Exon>> allExons = new ArrayList<Node<Exon>>();
 		while (exonItr.hasNext()) {
 			
 			Node<Exon> currentExon = exonItr.next();
 			allExons.add(currentExon);
-			possiHits+=2;
 			
-			int totalDPs = bamParser.findDPs(chr, currentExon, exons);
-			int totalSRsLeft = bamParser.findSRs(chr, currentExon.getStart(), Direction.LEFT, exons);
-			int totalSRsRight = bamParser.findSRs(chr, currentExon.getEnd(), Direction.RIGHT, exons);
-			System.out.println(chr + "\t" + currentExon.getStart() + "\t" + currentExon.getEnd());
-			boolean foundDPs = totalDPs > 0;
-			boolean foundSRsLeft = totalSRsLeft > 0;
-			boolean foundSRsRight = totalSRsRight > 0;
-			if (foundDPs || foundSRsLeft || foundSRsRight) {
-				System.out.println(totalDPs + "\t" + totalSRsLeft + "\t" + totalSRsRight + "\tHERE");
-//				foundExons.add(currentExon);
-			} else {
-				System.out.println(totalDPs + "\t" + totalSRsLeft + "\t" + totalSRsRight);
+			bamParser.findDPs(chr, currentExon, exons, true);
+			bamParser.findSRs(chr, currentExon.getStart(), Direction.LEFT, exons);
+			bamParser.findSRs(chr, currentExon.getEnd(), Direction.RIGHT, exons);
+			
+		}
+		
+		Map<SAMRecord, Boolean> uniqueReads = bamParser.getFoundReads();
+		
+		return new RescueReturn(uniqueReads);
+				
+	}
+	
+	public class RescueReturn {
+		
+		int totalDPs;
+		int totalSRs;
+		
+		public RescueReturn(Map<SAMRecord, Boolean> uniqueReads) {
+			totalDPs = 0;
+			totalSRs = 0;
+			for (Map.Entry<SAMRecord, Boolean> entry : uniqueReads.entrySet()) {
+
+				if (entry.getValue() == true) {
+					totalSRs++;
+				} else {
+					totalDPs++;
+				}
+				
 			}
+		}
+
+		public int getTotalDPs() {
+			return totalDPs;
+		}
+		public int getTotalSRs() {
+			return totalSRs;
 		}
 		
 	}

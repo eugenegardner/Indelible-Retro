@@ -26,7 +26,7 @@ public class CheckReadStatus {
 		
 		boolean isSR = false;
 		
-		if (currentRecord.getMappingQuality() >= 10) {
+		if (currentRecord.getMappingQuality() >= 10 && currentRecord.getDuplicateReadFlag() == false) {
 			Pattern toTest;
 			
 			if (direction == Direction.LEFT) {
