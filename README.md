@@ -1,6 +1,5 @@
 # Retrogene
 
-<<<<<<< HEAD
 This tool was developed as part of Gardner et. al., Contribution of Retrotransposition to Developmental Disorders, 2019. It uses discordant pairs and split reads to identify processed psueudogenes in individual human genomes from whole exome sequencing data (WES). The tool is coded entirely in Java v1.8. The tool runs in three steps with each, along with examples, included in sections following this introduction and basic use instructions.  
 
 ## Basic Use
