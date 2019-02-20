@@ -1,5 +1,6 @@
 # Retrogene
 
+<<<<<<< HEAD
 This tool was developed as part of Gardner et. al., Contribution of Retrotransposition to Developmental Disorders, 2019. It uses discordant pairs and split reads to identify processed psueudogenes in individual human genomes from whole exome sequencing data (WES). The tool is coded entirely in Java v1.8. The tool runs in three steps with each, along with examples, included in sections following this introduction and basic use instructions.  
 
 ## Basic Use
@@ -149,3 +150,6 @@ Column 13 and 14 of the final genotype output represent a measurement of what pe
 **Distribution of the percent of reads which map between exons for each gene in the human genome for an individual from the DDD study. Genes which have been duplicated are marked with red lines. All have a p-value of at least 2e-4 based on the underlying distribution.**
 
 This distribution is provided as a file with suffix `.dist` attached to the file provided to `-o` during **Genotype** as one gene per line with gene name and % discordant pairs in column one and two, respectively.
+=======
+Uses split and discordant read pair evidence to discover processed psuedogenes in WXS data
+>>>>>>> 2f86bca4fb813b6d64474f5351e0a3cc6a3179f7
