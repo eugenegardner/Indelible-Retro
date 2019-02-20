@@ -14,7 +14,7 @@ This section details basic information required by the Retrogene discovery pipel
 | h | YES | path to the reference genome. Reference must be indexed with the same path as the reference but with .fai suffix. |
 | o | YES | output file for this particular step. **Note:** please make sure to change this path between steps or you could risk overwriting previous files! |
 | a | YES | path to output file from 'Aggregate' step (see below for more details). |
-| l | YES | file of files provided as input to 'Aggregate' step (see below for more details). |
+| l | YES | file of files provided as input to 'Aggregate' or 'Merge' step (see below for more details). |
 | g | YES | Gene file with one line per transcript (see below for more details). |
 | k | NO | List of known pseudogenes from other literature (see below for more details). |
 | p | NO | pLI and gene name annotation for all genes in -g (see below for more details). |
@@ -145,7 +145,17 @@ Output for **Discover** takes the following format:
 
 Column 13 and 14 of the final genotype output represent a measurement of what percent of a genes overlapping reads in the underlying WES data are discordant (i.e. map between one exon to the other). It is a decent measure of the likelihood of a gene being duplicated, but is not a perfect measure, mostly due to the length of a gene compared to the total number duplicated exons; i.e. a gene may be very long with many exons, but only the first two exons on the 3' end are duplicated, resulting in a low percent of overall reads as discordant). The overall distribution is roughly normal, and z-scores and p-values are calculated for each gene from a sample as shown in the figure below:
 
-![](eugenegardner.github.com/Retrogene/ReferenceFiles/DRPdistribution.png)
+![DRP Proportion](https://raw.githubusercontent.com/eugenegardner/Retrogene/master/ReferenceFiles/DRPdistribution.png)
 **Distribution of the percent of reads which map between exons for each gene in the human genome for an individual from the DDD study. Genes which have been duplicated are marked with red lines. All have a p-value of at least 2e-4 based on the underlying distribution.**
 
-This distribution is provided as a file with suffix `.dist` attached to the file provided to `-o` during **Genotype** as one gene per line with gene name and % discordant pairs in column one and two, respectively.
+This distribution is provided as a file with suffix `.dist` attached to the file provided to `-o` during **Genotype** as one gene per line with gene name and % discordant pairs in column one and two, respectively. This distribution should not be used to call pseudogenes as there are a number of genes in the genome that have this quality and have not been duplicated. It should instead be used as a potential indicator of the likelihood a gene called by this pipeline is indeed duplicated.
+
+## How to cite
+
+If using this software, please cite:
+
+Gardner et. al., [Contribution of Retrotransposition to Developmental Disorders](https://doi.org/10.1101/471375), BioRxiv, 2018
+
+If using the list of known processed pseudogenes provided in this package, please cite the following manuscript:
+
+Zhang et al., [Landscape and variation of novel retroduplications in 26 human populations](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1005567&rev=1), PloS Computational Biology, 2017.
