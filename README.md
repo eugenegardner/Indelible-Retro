@@ -9,7 +9,7 @@ This section details basic information required by the Retrogene discovery pipel
 ### Options
 
 | Option | Required? | Description | 
-|:----------- |:--------------------------------------------------------- |
+|:----------- |:--------------------------------------------------------- |:--------------------------- |
 | b | YES | path to the bam file being analyzed. |
 | h | YES | path to the reference genome. Reference must be indexed with the same path as the reference but with .fai suffix. |
 | o | YES | output file for this particular step. **Note:** please make sure to change this path between steps or you could risk overwriting previous files! |
