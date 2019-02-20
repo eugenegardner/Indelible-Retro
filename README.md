@@ -62,6 +62,7 @@ Where runtime is one of:
 | Discover | **Discover** processed pseudogenes in a single bam file. |
 | Aggregate | **Aggregate** discovered genes across samples to determine presence/absence during **Genotype**. |
 | Genotype | "**Genotype**" (actually determine presence/absence) of each gene identified during **Discover** in a single individual. |
+| Merge | **Merge** genotyped samples together into a final file format. |
 
 ## Running Retrogene
 
