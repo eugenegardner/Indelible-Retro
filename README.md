@@ -158,4 +158,4 @@ Gardner et. al., [Contribution of Retrotransposition to Developmental Disorders]
 
 If using the list of known processed pseudogenes provided in this package, please cite the following manuscript:
 
-Zhang et al., [Landscape and variation of novel retroduplications in 26 human populations](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1005567&rev=1), PloS Computational Biology, 2017.
+Zhang et al., [Landscape and variation of novel retroduplications in 26 human populations](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1005567), PloS Computational Biology, 2017.
