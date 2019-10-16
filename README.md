@@ -157,7 +157,7 @@ This distribution is provided as a file with suffix `.dist` attached to the file
 
 If using this software, please cite:
 
-Gardner et. al., [Contribution of Retrotransposition to Developmental Disorders](http://dx.doi.org/10.1038/s41467-019-12520-y), _Nature Communications_, 2018
+Gardner et. al., [Contribution of Retrotransposition to Developmental Disorders](http://dx.doi.org/10.1038/s41467-019-12520-y), _Nature Communications_, 2019
 
 If using the list of known processed pseudogenes provided in this package, please cite the following manuscript:
 
